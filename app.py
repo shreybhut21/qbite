@@ -4754,7 +4754,12 @@ def create_self_order():
         return jsonify({'error': 'Invalid or tampered QR code.'}), 403
 
     t   = Table.query.get_or_404(table_id)
-    tid = t.tenant_id   # always from table, never Flask session
+    tid = d.get('tenant_id')
+    if not tid:
+        tid = t.tenant_id   # fallback to table's tenant (for regular restaurants)
+    if not tid:
+        return jsonify({'error': 'Invalid table or missing tenant_id'}), 400
+
     if not tenant_feature_enabled('self_order', tenant_id=tid):
         return tenant_feature_block_response('self_order', is_api=True)
 
@@ -4970,9 +4975,11 @@ def self_order_menu():
         return jsonify({'error': 'Invalid token'}), 403
 
     tbl = Table.query.get_or_404(table_id)
-    tid = tbl.tenant_id
+    tid = request.args.get('tenant_id', type=int)
     if not tid:
-        return jsonify({'error': 'Invalid table'}), 400
+        tid = tbl.tenant_id
+    if not tid:
+        return jsonify({'error': 'Invalid table or missing tenant_id'}), 400
     if not tenant_feature_enabled('self_order', tenant_id=tid):
         return tenant_feature_block_response('self_order', is_api=True)
     bid = _resolve_self_order_branch_id(tbl, tenant_id=tid)
