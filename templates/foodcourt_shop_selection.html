@@ -59,24 +59,25 @@
     </header>
 
     <main class="flex-1 p-4 max-w-lg mx-auto w-full mt-4">
-        {% set active_shops = food_court.tenants | selectattr('is_active') | list %}
-        
-        {% if active_shops %}
+        {% if shops %}
             <div class="space-y-3">
-                {% for shop in active_shops %}
-                <a href="/order/t/{{ token }}?shop_id={{ shop.id }}" class="shop-card">
+                {% for shop in shops %}
+                <a href="/table/{{ token }}/shop/{{ shop.id }}/order" class="shop-card">
                     <div>
                         <h3 class="text-lg font-bold">{{ shop.name }}</h3>
-                        <p class="text-sm text-gray-500 mt-1">Tap to view menu &rarr;</p>
+                        {% if shop.description %}
+                        <p class="text-sm text-gray-500 mt-0.5">{{ shop.description }}</p>
+                        {% endif %}
+                        <p class="text-sm text-gray-400 mt-1">Tap to view menu &rarr;</p>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0 ml-3">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </div>
                 </a>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="text-center p-8 bg-white border border-border rounded-xl mt-8">
+            <div class="text-center p-8 bg-white border border-gray-200 rounded-xl mt-8">
                 <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <h3 class="font-bold text-lg mb-1">No Shops Available</h3>
                 <p class="text-gray-500 text-sm">There are currently no active shops in this food court.</p>
@@ -85,3 +86,4 @@
     </main>
 </body>
 </html>
+

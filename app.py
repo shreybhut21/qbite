@@ -4611,6 +4611,22 @@ def self_order_page(token):
         return "Invalid or tampered QR code.", 403
 
     t = Table.query.get_or_404(table_id)
+
+    # ── Food Court table: show shop selection first ──────────────────────────
+    if t.food_court_id:
+        fc = db.session.get(FoodCourt, t.food_court_id)
+        if not fc:
+            return "Food court not found.", 404
+        # Load all active shops in this food court
+        shops = Tenant.query.filter_by(food_court_id=fc.id, is_active=True).all()
+        return render_template('foodcourt_shop_selection.html',
+            food_court=fc,
+            shops=shops,
+            table=t,
+            token=token,
+        )
+
+    # ── Regular restaurant table: go straight to menu ───────────────────────
     tenant = db.session.get(Tenant, t.tenant_id)
     if not tenant_feature_enabled('self_order', tenant=tenant):
         return tenant_feature_block_response('self_order', is_api=False)
@@ -4622,6 +4638,37 @@ def self_order_page(token):
         tenant_id=t.tenant_id,
         branch_id=branch_id,
         cafe_name=cafe_name,
+        qr_token=None,
+    )
+
+
+@app.route('/table/<token>/shop/<int:shop_id>/order')
+def self_order_page_shop(token, shop_id):
+    """Food court: after user selects a shop, land on that shop's self-order menu."""
+    signer = URLSafeSerializer(app.secret_key, salt='qr-table')
+    try:
+        table_id = signer.loads(token)
+    except BadSignature:
+        return "Invalid or tampered QR code.", 403
+
+    t = Table.query.get_or_404(table_id)
+    if not t.food_court_id:
+        return "This table is not part of a food court.", 400
+
+    shop = Tenant.query.filter_by(id=shop_id, food_court_id=t.food_court_id, is_active=True).first()
+    if not shop:
+        return "Shop not found or not available.", 404
+
+    if not tenant_feature_enabled('self_order', tenant=shop):
+        return tenant_feature_block_response('self_order', is_api=False)
+
+    branch_id = _resolve_self_order_branch_id(t, tenant_id=shop.id)
+    return render_template('self_order.html',
+        table_id=token,
+        table_number=t.number,
+        tenant_id=shop.id,
+        branch_id=branch_id,
+        cafe_name=shop.name,
         qr_token=None,
     )
 
