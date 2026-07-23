@@ -15,7 +15,7 @@ from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import or_, func
+from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from itsdangerous import URLSafeSerializer, BadSignature
@@ -923,6 +923,21 @@ def apply_tenant_scope(query, model_class):
     tid = get_current_tenant_id()
     
     if tid and hasattr(model_class, 'tenant_id'):
+        fc_id = None
+        if user and getattr(user, 'food_court_id', None):
+            fc_id = user.food_court_id
+        else:
+            tenant = db.session.get(Tenant, tid)
+            if tenant:
+                fc_id = getattr(tenant, 'food_court_id', None)
+        
+        if fc_id and hasattr(model_class, 'food_court_id'):
+            return query.filter(
+                or_(
+                    model_class.tenant_id == tid,
+                    and_(model_class.tenant_id.is_(None), model_class.food_court_id == fc_id)
+                )
+            )
         return query.filter(model_class.tenant_id == tid)
     elif user and user.food_court_id and hasattr(model_class, 'food_court_id'):
         return query.filter(model_class.food_court_id == user.food_court_id)
@@ -1211,6 +1226,10 @@ def favicon():
     if os.path.exists(logo_path):
         return send_from_directory(os.path.dirname(__file__), 'qbite_logo.svg', mimetype='image/svg+xml')
     return '', 204
+
+@app.route('/card')
+def digital_card():
+    return render_template('card.html')
 
 @app.route('/')
 def landing():
@@ -1759,6 +1778,10 @@ def password_reset_complete():
 @app.route('/pos')
 @staff_page_required
 def pos():
+    user = db.session.get(User, session.get('user_id'))
+    if user and user.food_court_id:
+        return redirect(url_for('dashboard'))
+        
     return render_template(
         'pos.html',
         user_name=session.get('user_name'),
@@ -1769,6 +1792,10 @@ def pos():
 @app.route('/backend')
 @page_login_required(allowed_roles=('restaurant',))
 def backend():
+    user = db.session.get(User, session.get('user_id'))
+    if user and user.food_court_id:
+        return redirect(url_for('dashboard'))
+        
     t_id = get_current_tenant_id()
     t = Tenant.query.get(t_id) if t_id else None
     return render_template(
@@ -2344,6 +2371,99 @@ def update_shrey_shop_limit(fc_id):
     db.session.commit()
     return jsonify({'ok': True, 'shop_limit': limit, 'request': _serialize_shrey_foodcourt(fc)})
 
+# ─── API: Food Court Shops ───────────────────────────────────
+@app.route('/api/foodcourt/shops', methods=['GET', 'POST'])
+@login_required
+def foodcourt_shops():
+    user = db.session.get(User, session.get('user_id'))
+    if not user or not user.food_court_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    fc = db.session.get(FoodCourt, user.food_court_id)
+    if not fc:
+        return jsonify({'error': 'Food court not found'}), 404
+
+    if request.method == 'GET':
+        shops = Tenant.query.filter_by(food_court_id=fc.id).all()
+        return jsonify([{
+            'id': t.id,
+            'name': t.name,
+            'slug': t.slug,
+            'is_active': t.is_active,
+            'approval_status': t.approval_status,
+            'phone': t.phone,
+            'logo_b64': t.logo_b64
+        } for t in shops])
+
+    # POST method
+    d = request.json or {}
+    restaurant_name = (d.get('restaurant_name') or '').strip()
+    name = (d.get('name') or '').strip()
+    email = (d.get('email') or '').strip()
+    password = d.get('password') or ''
+    phone = (d.get('phone') or '').strip()
+
+    if not restaurant_name or not name or not email or not password or not phone:
+        return jsonify({'error': 'All fields are required'}), 400
+    if find_user_by_email(email):
+        return jsonify({'error': 'Email already exists'}), 400
+    password_error = strong_password_error(password, email)
+    if password_error:
+        return jsonify({'error': password_error}), 400
+
+    if fc.shop_limit and fc.shop_limit > 0:
+        current_count = Tenant.query.filter_by(food_court_id=fc.id).count()
+        if current_count >= fc.shop_limit:
+            return jsonify({'error': f'Shop limit reached. This food court allows a maximum of {fc.shop_limit} shops.'}), 400
+
+    base_slug = make_slug(restaurant_name)
+    slug = base_slug
+    counter = 1
+    while Tenant.query.filter_by(slug=slug).first():
+        slug = f'{base_slug}-{counter}'
+        counter += 1
+
+    tenant = Tenant(
+        name=restaurant_name,
+        slug=slug,
+        is_active=True,
+        approval_status='approved',
+        phone=phone,
+        food_court_id=fc.id,
+    )
+    db.session.add(tenant)
+    db.session.flush()
+
+    branch = Branch(
+        name=f'{restaurant_name} — Main',
+        tenant_id=tenant.id,
+        phone=phone,
+    )
+    db.session.add(branch)
+    db.session.flush()
+
+    owner = User(
+        name=name,
+        email=email,
+        password=generate_password_hash(password, method='scrypt'),
+        role='restaurant',
+        tenant_id=tenant.id,
+        branch_id=branch.id,
+        is_superadmin=True,
+    )
+    db.session.add(owner)
+    db.session.flush()
+
+    tenant.owner_id = owner.id
+
+    for pm_name, pm_type in [('Cash', 'cash'), ('UPI / QR', 'upi'), ('Card', 'digital')]:
+        db.session.add(PaymentMethod(name=pm_name, type=pm_type, enabled=True, tenant_id=tenant.id))
+
+    db.session.add(CafeSettings(name=restaurant_name, tenant_id=tenant.id))
+    db.session.commit()
+
+    return jsonify({'ok': True, 'message': 'Shop added successfully'})
+
 # ─── API: Products ─────────────────────────────────────────
 @app.route('/api/products', methods=['GET'])
 def get_products():
@@ -2493,8 +2613,28 @@ def delete_product(pid):
 def get_floors():
     q = apply_tenant_scope(Floor.query, Floor)
     bid = get_active_branch_id()
+    
+    user = get_current_user()
+    fc_id = None
+    if user and getattr(user, 'food_court_id', None):
+        fc_id = user.food_court_id
+    else:
+        tid = get_current_tenant_id()
+        if tid:
+            tenant = db.session.get(Tenant, tid)
+            if tenant:
+                fc_id = getattr(tenant, 'food_court_id', None)
+
     if bid is not None:
-        q = q.filter(or_(Floor.branch_id == bid, Floor.branch_id.is_(None)))
+        if fc_id is not None:
+            q = q.filter(or_(
+                Floor.branch_id == bid,
+                Floor.branch_id.is_(None),
+                Floor.food_court_id == fc_id
+            ))
+        else:
+            q = q.filter(or_(Floor.branch_id == bid, Floor.branch_id.is_(None)))
+            
     floors = q.options(selectinload(Floor.tables)).all()
     result = []
     for f in floors:
@@ -2509,7 +2649,7 @@ def get_floors():
                 'merged_to_id': t.merged_to_id,
             }
             for t in sorted_tables
-            if t.active and (bid is None or t.branch_id in (None, bid))
+            if t.active and (bid is None or t.branch_id in (None, bid) or (fc_id is not None and getattr(t, 'food_court_id', None) == fc_id))
         ]
         result.append({'id':f.id,'name':f.name,'tables':tables})
     return jsonify(result)
@@ -3474,6 +3614,8 @@ def create_order():
                 t = db.session.get(Table, table_id)
                 if t:
                     t.status = 'occupied'
+                    db.session.commit()
+                    emit_scoped('table_update', {'table_id': t.id, 'status': 'occupied'}, tenant_id=t.tenant_id, branch_id=t.branch_id)
             order_num = o.order_number
         else:
             count = Order.query.filter_by(branch_id=branch_id).count() + 1
@@ -3516,6 +3658,8 @@ def create_order():
                 t = db.session.get(Table, table_id)
                 if t:
                     t.status = 'occupied'
+                    db.session.commit()
+                    emit_scoped('table_update', {'table_id': t.id, 'status': 'occupied'}, tenant_id=t.tenant_id, branch_id=t.branch_id)
         
         try:
             db.session.commit()
@@ -4066,6 +4210,8 @@ def _seat_reservation_internal(reservation):
     reservation.is_verified = True
     if reservation.table:
         reservation.table.status = 'occupied'
+        db.session.commit()
+        emit_scoped('table_update', {'table_id': reservation.table.id, 'status': 'occupied'}, tenant_id=reservation.table.tenant_id, branch_id=reservation.table.branch_id)
     if reservation.items:
         s = Session.query.filter_by(user_id=session['user_id'], status='open').first()
         if not s:
@@ -4648,6 +4794,7 @@ def create_self_order():
 
         t.status = 'occupied'
         db.session.commit()
+        emit_scoped('table_update', {'table_id': t.id, 'status': 'occupied'}, tenant_id=t.tenant_id, branch_id=t.branch_id)
 
         items_payload = _serialize_ticket_items(o)
         tu = {
@@ -4703,6 +4850,9 @@ def create_self_order():
         db.session.add(oi)
 
     t.status = 'occupied'
+    db.session.commit()
+    emit_scoped('table_update', {'table_id': t.id, 'status': 'occupied'}, tenant_id=t.tenant_id, branch_id=t.branch_id)
+
     kt = KitchenTicket(order_id=o.id, tenant_id=tid)
     db.session.add(kt)
     db.session.commit()

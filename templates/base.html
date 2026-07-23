@@ -199,19 +199,10 @@
 <script>
 const THEME_STORAGE_KEY = 'qbite-theme';
 
-function applyTheme(theme) {
-  const nextTheme = theme === 'light' ? 'light' : 'dark';
-  document.body.setAttribute('data-theme', nextTheme);
-  document.documentElement.style.colorScheme = nextTheme;
-  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-  document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
-    btn.textContent = nextTheme === 'light' ? 'Dark Mode' : 'Light Mode';
-  });
-}
-
-function toggleTheme() {
-  const current = document.body.getAttribute('data-theme') || 'dark';
-  applyTheme(current === 'light' ? 'dark' : 'light');
+function applyTheme() {
+  document.body.setAttribute('data-theme', 'light');
+  document.documentElement.style.colorScheme = 'light';
+  localStorage.setItem(THEME_STORAGE_KEY, 'light');
 }
 
 let toastTimer = null;
@@ -280,8 +271,7 @@ async function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
-  applyTheme(saved);
+  applyTheme();
   if (typeof refreshPrinterStatus === 'function') {
     try { refreshPrinterStatus(); } catch (e) {}
   }

@@ -425,7 +425,7 @@
         </svg>
         Staff
       </button>
-      {% if not (tenant and tenant.food_court_id) and not food_court %}
+      {% if user_role != 'foodcourt_admin' %}
       <button onclick="switchDashTab('users')"
         class="dash-nav-btn w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-left">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,7 +443,7 @@
         Attendance
       </button>
       {% endif %}
-      {% if not (tenant and tenant.food_court_id) and not food_court %}
+      {% if user_role != 'foodcourt_admin' %}
       <button onclick="switchDashTab('compare')"
         class="dash-nav-btn w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-left">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -454,7 +454,7 @@
       </button>
       {% endif %}
       <div class="border-t border-border my-3"></div>
-      {% if not (tenant and tenant.food_court_id) and not food_court %}
+      {% if user_role != 'foodcourt_admin' %}
       <a href="/backend" class="dash-nav-btn flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -878,7 +878,7 @@
       </svg>
       Staff
     </button>
-    {% if not (tenant and tenant.food_court_id) and not food_court %}
+    {% if user_role != 'foodcourt_admin' %}
     <button class="bnav-btn" id="bnav-attendance" onclick="switchDashTab('attendance')">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -900,7 +900,7 @@
 <!-- More Drawer -->
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeMoreDrawer()"></div>
 <div class="more-drawer" id="moreDrawer">
-  {% if not (tenant and tenant.food_court_id) and not food_court %}
+  {% if user_role != 'foodcourt_admin' %}
   <button class="drawer-item" onclick="switchDashTab('compare');closeMoreDrawer()">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -909,7 +909,7 @@
     Branches
   </button>
   {% endif %}
-  {% if not (tenant and tenant.food_court_id) and not food_court %}
+  {% if user_role != 'foodcourt_admin' %}
   <a href="/backend" class="drawer-item">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1033,8 +1033,46 @@
     </div>
   </div>
 </div>
+</div>
+
+<!-- Add Shop Modal -->
+<div id="shopModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+  <div class="card p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <h2 class="text-2xl font-bold mb-6">Add Restaurant</h2>
+    <div class="space-y-4">
+      <div><label class="block text-sm text-gray-500 mb-2">Restaurant Name</label><input type="text" id="shopRestName"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Admin Name</label><input type="text" id="shopAdminName"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Email</label><input type="email" id="shopEmail"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Password</label><input type="password" id="shopPassword"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Phone</label><input type="tel" id="shopPhone"></div>
+    </div>
+    <div class="flex gap-3 mt-8">
+      <button onclick="closeShopModal()" class="flex-1 btn-ghost py-2 rounded-lg font-semibold">Cancel</button>
+      <button onclick="saveShop()" class="flex-1 btn-primary py-2 rounded-lg text-white font-semibold">Add Restaurant</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Shop Modal -->
+<div id="shopModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+  <div class="card p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <h2 class="text-2xl font-bold mb-6">Add Restaurant</h2>
+    <div class="space-y-4">
+      <div><label class="block text-sm text-gray-500 mb-2">Restaurant Name</label><input type="text" id="shopRestName"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Admin Name</label><input type="text" id="shopAdminName"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Email</label><input type="email" id="shopEmail"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Password</label><input type="password" id="shopPassword"></div>
+      <div><label class="block text-sm text-gray-500 mb-2">Phone</label><input type="tel" id="shopPhone"></div>
+    </div>
+    <div class="flex gap-3 mt-8">
+      <button onclick="closeShopModal()" class="flex-1 btn-ghost py-2 rounded-lg font-semibold">Cancel</button>
+      <button onclick="saveShop()" class="flex-1 btn-primary py-2 rounded-lg text-white font-semibold">Add Restaurant</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
+
 <script>
   const DASHBOARD_CONTEXT = {
     isSuperadmin: {{ 'true' if is_superadmin else 'false' }},
@@ -1888,5 +1926,154 @@
   });
 
   setInterval(loadReservations, 60000);
+  /* ── Food Court Shops ── */
+  async function loadShops() {
+    if (!DASHBOARD_CONTEXT.isFoodCourtAdmin) return;
+    const shops = await api('/api/foodcourt/shops');
+    const container = document.getElementById('shops-list');
+    if (!container) return;
+    if (shops.error) {
+      container.innerHTML = `<div class="col-span-full p-6 card text-red-400 text-center">${shops.error}</div>`;
+      return;
+    }
+    if (!shops.length) {
+      container.innerHTML = `<div class="col-span-full p-10 card text-center text-gray-500">No restaurants in your food court yet. Click "+ Add Restaurant" to get started.</div>`;
+      return;
+    }
+    container.innerHTML = shops.map(shop => `
+      <div class="card p-5 border border-border hover:border-brand-500/30 transition-all flex flex-col items-center text-center">
+        ${shop.logo_b64 ? `<img src="${shop.logo_b64}" class="w-16 h-16 object-cover rounded-2xl mb-4 shadow-md">` : `<div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold text-xl mb-4 shadow-inner">${shop.name.charAt(0)}</div>`}
+        <h3 class="font-bold text-lg text-white mb-1">${escHtml(shop.name)}</h3>
+        <p class="text-xs text-gray-500 mb-3">${escHtml(shop.phone || 'No phone')}</p>
+        ${shop.is_active ? '<span class="tag bg-green-500/20 text-green-400 border border-green-500/30">Active</span>' : '<span class="tag bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>'}
+      </div>
+    `).join('');
+  }
+
+  function openShopModal() {
+    document.getElementById('shopRestName').value = '';
+    document.getElementById('shopAdminName').value = '';
+    document.getElementById('shopEmail').value = '';
+    document.getElementById('shopPassword').value = '';
+    document.getElementById('shopPhone').value = '';
+    document.getElementById('shopModal').classList.remove('hidden');
+  }
+
+  function closeShopModal() {
+    document.getElementById('shopModal').classList.add('hidden');
+  }
+
+  async function saveShop() {
+    const payload = {
+      restaurant_name: document.getElementById('shopRestName').value,
+      name: document.getElementById('shopAdminName').value,
+      email: document.getElementById('shopEmail').value,
+      password: document.getElementById('shopPassword').value,
+      phone: document.getElementById('shopPhone').value
+    };
+    if (!payload.restaurant_name || !payload.name || !payload.email || !payload.password || !payload.phone) {
+      toast('All fields are required', 'error');
+      return;
+    }
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerText = 'Adding...';
+    try {
+      const res = await api('/api/foodcourt/shops', 'POST', payload);
+      if (res.error) {
+        toast(res.error, 'error');
+      } else {
+        toast('Restaurant added successfully', 'success');
+        closeShopModal();
+        await loadShops();
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Add Restaurant';
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    switchDashTab('shops'); // Load shops tab content if it is default
+    if (DASHBOARD_CONTEXT.isFoodCourtAdmin) {
+      loadShops();
+    }
+  });
+
+  /* ── Food Court Shops ── */
+  async function loadShops() {
+    if (!DASHBOARD_CONTEXT.isFoodCourtAdmin) return;
+    const shops = await api('/api/foodcourt/shops');
+    const container = document.getElementById('shops-list');
+    if (!container) return;
+    if (shops.error) {
+      container.innerHTML = `<div class="col-span-full p-6 card text-red-400 text-center">${shops.error}</div>`;
+      return;
+    }
+    if (!shops.length) {
+      container.innerHTML = `<div class="col-span-full p-10 card text-center text-gray-500">No restaurants in your food court yet. Click "+ Add Restaurant" to get started.</div>`;
+      return;
+    }
+    container.innerHTML = shops.map(shop => `
+      <div class="card p-5 border border-border hover:border-brand-500/30 transition-all flex flex-col items-center text-center">
+        ${shop.logo_b64 ? `<img src="${shop.logo_b64}" class="w-16 h-16 object-cover rounded-2xl mb-4 shadow-md">` : `<div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold text-xl mb-4 shadow-inner">${shop.name.charAt(0)}</div>`}
+        <h3 class="font-bold text-lg text-white mb-1">${escHtml(shop.name)}</h3>
+        <p class="text-xs text-gray-500 mb-3">${escHtml(shop.phone || 'No phone')}</p>
+        ${shop.is_active ? '<span class="tag bg-green-500/20 text-green-400 border border-green-500/30">Active</span>' : '<span class="tag bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>'}
+      </div>
+    `).join('');
+  }
+
+  function openShopModal() {
+    document.getElementById('shopRestName').value = '';
+    document.getElementById('shopAdminName').value = '';
+    document.getElementById('shopEmail').value = '';
+    document.getElementById('shopPassword').value = '';
+    document.getElementById('shopPhone').value = '';
+    document.getElementById('shopModal').classList.remove('hidden');
+  }
+
+  function closeShopModal() {
+    document.getElementById('shopModal').classList.add('hidden');
+  }
+
+  async function saveShop() {
+    const payload = {
+      restaurant_name: document.getElementById('shopRestName').value,
+      name: document.getElementById('shopAdminName').value,
+      email: document.getElementById('shopEmail').value,
+      password: document.getElementById('shopPassword').value,
+      phone: document.getElementById('shopPhone').value
+    };
+    if (!payload.restaurant_name || !payload.name || !payload.email || !payload.password || !payload.phone) {
+      toast('All fields are required', 'error');
+      return;
+    }
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerText = 'Adding...';
+    try {
+      const res = await api('/api/foodcourt/shops', 'POST', payload);
+      if (res.error) {
+        toast(res.error, 'error');
+      } else {
+        toast('Restaurant added successfully', 'success');
+        closeShopModal();
+        await loadShops();
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Add Restaurant';
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    switchDashTab('shops'); // Load shops tab content if it is default
+    if (DASHBOARD_CONTEXT.isFoodCourtAdmin) {
+      loadShops();
+    }
+  });
+
 </script>
 {% endblock %}
+

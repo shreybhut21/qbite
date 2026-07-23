@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Qbite - Digital Business Card</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      /* Modern mesh gradient background */
+      background-color: #f8fafc;
+      background-image: 
+        radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, hsla(189,100%,56%,1) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+        radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
+        radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%),
+        radial-gradient(at 0% 0%, hsla(343,100%,76%,1) 0px, transparent 50%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border-radius: 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    .profile-img {
+      border: 4px solid white;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      background: white;
+    }
+
+    .link-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255,255,255,1);
+      border-radius: 1rem;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all 0.3s ease;
+      color: #1e293b;
+      text-decoration: none;
+      font-weight: 500;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .link-btn:hover, .link-btn:active {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px rgba(0,0,0,0.05);
+      background: white;
+    }
+
+    .link-btn i {
+      font-size: 1.25rem;
+      width: 30px;
+      text-align: center;
+    }
+
+    .action-btn {
+      background: #1e293b;
+      color: white;
+      border: none;
+      border-radius: 2rem;
+      padding: 1rem 2rem;
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 20px rgba(30, 41, 59, 0.2);
+    }
+
+    .action-btn:hover {
+      background: #0f172a;
+      transform: translateY(-2px);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* specific brand colors */
+    .c-whatsapp { color: #25D366; }
+    .c-email { color: #ea4335; }
+    .c-phone { color: #3b82f6; }
+    .c-web { color: #8b5cf6; }
+  </style>
+</head>
+<body>
+
+  <div class="glass-card flex flex-col p-6">
+    <!-- Header -->
+    <div class="flex flex-col items-center text-center mt-4">
+      <img src="{{ url_for('static', filename='img/qbitecriclelogo.png') }}" alt="Qbite Logo" class="profile-img mb-4">
+      <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Qbite</h1>
+      <p class="text-gray-500 font-medium mt-1">Next-Gen POS & Cafe Management</p>
+      <p class="text-gray-400 text-sm mt-2 max-w-xs">Empowering restaurants with high-performance floor, kitchen, and order management tools.</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-8 flex flex-col gap-3">
+      
+      <a href="https://wa.me/917984579155" target="_blank" rel="noopener noreferrer" class="link-btn">
+        <i class="fa-brands fa-whatsapp c-whatsapp"></i>
+        <span>WhatsApp Us</span>
+      </a>
+
+      <a href="tel:+917984579155" class="link-btn">
+        <i class="fa-solid fa-phone c-phone"></i>
+        <span>Call Sales</span>
+      </a>
+
+      <a href="mailto:info.qbite@gmail.com" class="link-btn">
+        <i class="fa-solid fa-envelope c-email"></i>
+        <span>Email Us</span>
+      </a>
+
+      <a href="/" class="link-btn">
+        <i class="fa-solid fa-globe c-web"></i>
+        <span>Visit Website</span>
+      </a>
+      
+    </div>
+
+    <!-- Save Contact -->
+    <div class="mt-8 mb-4">
+      <button onclick="downloadVCF()" class="action-btn">
+        <i class="fa-solid fa-address-card"></i>
+        Save to Contacts
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    function downloadVCF() {
+      // Create vCard data
+      const vcfData = `BEGIN:VCARD
+VERSION:3.0
+FN:Qbite POS
+ORG:Qbite Inc.
+TITLE:Next-Gen POS & Cafe Management
+TEL;TYPE=WORK,VOICE:+917984579155
+EMAIL;TYPE=PREF,INTERNET:info.qbite@gmail.com
+URL:${window.location.origin}/
+NOTE:Empowering restaurants with high-performance management tools.
+END:VCARD`;
+
+      const blob = new Blob([vcfData], { type: 'text/vcard' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'Qbite.vcf';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
