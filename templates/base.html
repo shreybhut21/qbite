@@ -8,7 +8,41 @@
 <meta name="apple-mobile-web-app-title" content="Qbite">
 <meta name="theme-color" content="#1a1a1a">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>{% block title %}Qbite{% endblock %}</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="{% block meta_description %}Qbite — Smart POS system for cafes, restaurants, and food courts. Manage orders, tables, menus and billing all in one place.{% endblock %}">
+  <meta name="keywords" content="{% block meta_keywords %}POS, point of sale, POS system, food court POS, cafe POS, restaurant POS, billing software, order management, table management, QBite, qbite, cafe billing, food court billing, restaurant billing software, online POS{% endblock %}">
+  <meta name="author" content="Qbite">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="{{ request.url }}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Qbite">
+  <meta property="og:title" content="{% block og_title %}Qbite — Smart POS for Cafes & Food Courts{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Manage orders, tables, menus and billing for your cafe, restaurant or food court — all in one smart POS system.{% endblock %}">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Qbite",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Smart POS system for cafes, restaurants, and food courts. Manage orders, tables, menus and billing all in one place.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR"
+    },
+    "keywords": "POS, point of sale, food court POS, cafe POS, restaurant POS, billing software"
+  }
+  </script>
+
+<title>{% block title %}Qbite — Smart POS for Cafes & Food Courts{% endblock %}</title>
 <!-- Compiled Tailwind CSS for production -->
 <link rel="stylesheet" href="{{ url_for('static', filename='output.css') }}">
 <!-- Socket.io for real-time updates -->

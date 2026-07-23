@@ -6991,6 +6991,38 @@ def before_request():
         app._db_initialized = True
 
 
+# ─── SEO Routes ────────────────────────────────────────────────────────────────
+@app.route('/robots.txt')
+def robots_txt():
+    content = """User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /pos/
+Sitemap: {}/sitemap.xml
+""".format(request.host_url.rstrip('/'))
+    return Response(content, mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    base = request.host_url.rstrip('/')
+    urls = [
+        {'loc': base + '/', 'priority': '1.0', 'changefreq': 'weekly'},
+        {'loc': base + '/auth/login', 'priority': '0.8', 'changefreq': 'monthly'},
+        {'loc': base + '/auth/register', 'priority': '0.7', 'changefreq': 'monthly'},
+    ]
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for u in urls:
+        xml += f'  <url>\n'
+        xml += f'    <loc>{u["loc"]}</loc>\n'
+        xml += f'    <changefreq>{u["changefreq"]}</changefreq>\n'
+        xml += f'    <priority>{u["priority"]}</priority>\n'
+        xml += f'  </url>\n'
+    xml += '</urlset>'
+    return Response(xml, mimetype='application/xml')
+
+
 if __name__ == '__main__':
 
     import os
