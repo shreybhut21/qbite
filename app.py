@@ -1323,12 +1323,14 @@ def set_customer_context():
         return jsonify({'error': 'Valid tenant_id is required'}), 400
 
     tenant = Tenant.query.filter_by(id=tenant_id, is_active=True).first_or_404()
+    
+    # Only update session context if the user is a customer (or guest).
+    # If a restaurant admin is browsing the customer UI, don't break their admin session.
     role = normalize_role(session.get('user_role')) if session.get('user_id') else 'customer'
-    if role != 'customer':
-        return jsonify({'error': 'forbidden'}), 403
-
-    session['tenant_id'] = tenant.id
-    session.modified = True
+    if role == 'customer':
+        session['tenant_id'] = tenant.id
+        session.modified = True
+        
     return jsonify({'ok': True, 'tenant_id': tenant.id, 'tenant_slug': tenant.slug, 'tenant_name': tenant.name})
 
 @app.route('/api/restaurants')
